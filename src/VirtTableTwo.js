@@ -1,20 +1,20 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
 
 import { CLASS_NAMES, DEFAULT_NO_DATA_MESSAGE } from './virt-table/constant';
 import Header from './virt-table/Header';
 import Body from './virt-table/Body';
 
-import 'react-datepicker/dist/react-datepicker.css';
-
 import TimeRangeSelector from './virt-table/TimeRangeSelector';
-import TableToolkitProvider from './virt-table/TableToolkitProvider';
-import ExportPanel from './virt-table/ExportPanel';
-import TableBodyCellComponentWrapper from './virt-table/TableBodyCellComponentWrapper';
 import SearchBar from './virt-table/SearchBar';
 import TableActionsRow from './virt-table/TableActionsRow';
+import ExportPanel from './virt-table/ExportPanel';
+import TableToolkitProvider from './virt-table/TableToolkitProvider';
+import TableBodyCellComponentWrapper from './virt-table/TableBodyCellComponentWrapper';
 
 import { getTableRowComponent, getTableCellComponent, useResizeObserver, getTableHeight } from './virt-table/helper';
+
+import Context from './virt-table/context';
 
 /**
  * Virtual Table Component
@@ -28,9 +28,9 @@ import { getTableRowComponent, getTableCellComponent, useResizeObserver, getTabl
  * @param {Boolean} sortable - if table is sortable and head obj has sortable set to false, it will be disabled for that column
  * @param {Function} columnFormatter - function that returns component that will be displayed as the cell of column with id === this header element id
  * @param {Function}columnValueFormatter - function that returns component that will be displayed as the value of cell in column with id === this header element id
- * @param {String} columnClassName - className that will be added to the table cells with column id === this header obj id
+ * @param {String} columnClassName - className that will be added to the table cells with column id === this header obj id (does not override the current className of that cell)
  * @param {Function} sortFunc - callback used to sort the data - a, b parameters are provided (just like in default Array.sort) - naturalComparator is used by default
- *
+ * @param {String} focusAnchorId - id added to the focus anchor (.focus has to be called on this dom element if you want to focus the table cells)
  * example: header = [
  *                      "First Header",
  *                      { cellValue: "Second header", sortable: false},
@@ -42,7 +42,7 @@ import { getTableRowComponent, getTableCellComponent, useResizeObserver, getTabl
  * where the array of cells data is located. When the table is expandable, rows might have the children's data located under
  * "children" attribute. "children" should be an Array of children rows. Each cell data might be either an Object or a string.
  * When it is an Object, ir might contain following keys :
- * @param {String} className - adds className to the cell
+ * @param {String} className - adds className to the cell className (does not override the current className)
  * @param {String|Number} cellValue - displayed value
  *
  * example: data = [
@@ -86,7 +86,11 @@ import { getTableRowComponent, getTableCellComponent, useResizeObserver, getTabl
  * Extended table functionalities are described in ./table/TableToolkitProvider.js
  */
 
-const Table = props => {
+const Table = defaultProps => {
+    const contextProps = useContext(Context);
+    const [shouldUseContext] = useState(contextProps.shouldUseContext);
+    const props = shouldUseContext ? contextProps : defaultProps;
+
     const tableBodyWrapRef = useRef();
     const tableFocusAnchorRef = useRef();
     const dimensions = useResizeObserver(tableBodyWrapRef);
@@ -206,6 +210,11 @@ const Table = props => {
             return;
         }
 
+        if ([37, 38, 39, 40].includes(ev.keyCode)) {
+            // prevent outside containers being scrolled up/down/left/right
+            ev.preventDefault();
+        }
+
         if (shouldBlockKeyDownRef.current) {
             return;
         }
@@ -219,6 +228,7 @@ const Table = props => {
         switch (ev.keyCode) {
             case 39: {
                 // "ArrowRight"
+
                 if (maxFocusedCellId <= focusedCellId) {
                     return;
                 }
@@ -228,6 +238,7 @@ const Table = props => {
 
             case 37: {
                 // "ArrowLeft"
+
                 const isWithinChildren = focusedChildrenRowId != null;
 
                 const shouldDoNothing = focusedCellId <= (isWithinChildren ? 1 : 0);
@@ -239,6 +250,7 @@ const Table = props => {
             }
             case 40: {
                 // "ArrowDown"
+
                 const isWithinChildren = focusedChildrenRowId != null;
                 const currentRowData = props.data[focusedRowId];
                 if (currentRowData == null) {
@@ -310,6 +322,7 @@ const Table = props => {
 
             case 13: {
                 // "Enter"
+
                 const currentRowData = props.data[focusedRowId];
                 if (currentRowData == null) {
                     return;
@@ -438,6 +451,8 @@ const Table = props => {
         tableStyle.height = `${tableHeight}px`;
     }
 
+    console.log(props.data);
+
     return (
         <div style={tableStyle} className={tableClassName}>
             <Header
@@ -463,6 +478,7 @@ const Table = props => {
                 onFocus={() => setIsBodyFocused(true)}
                 onBlur={() => setIsBodyFocused(false)}
                 onKeyDown={handleBodyKeyDown}
+                id={props.focusAnchorId || 'virtTableFocusAnchor'}
             ></div>
             <div ref={tableBodyWrapRef} className={CLASS_NAMES.BODY_WRAP}>
                 {dimensions && (
@@ -472,14 +488,16 @@ const Table = props => {
                         setScrollBarSize={setScrollBarSize}
                         data={props.data}
                         isLoading={props.isLoading}
-                        noDataMessage={props.noDataMessage}
+                        noDataMessage={props.noDataMessage || DEFAULT_NO_DATA_MESSAGE}
                         header={props.header}
+                        isBodyFocusable={isBodyFocusable}
                         focusedCellId={focusedCellId}
                         focusedRowId={focusedRowId}
                         focusedChildrenRowId={focusedChildrenRowId}
                         isFocused={isBodyFocused}
                         isExpandable={props.isExpandable}
                         RowComponent={RowComponent}
+                        virtual={props.virtual}
                         CellComponent={TableBodyCellComponentWrapper(
                             handleCellClick,
                             handleCellContextMenu,
@@ -507,7 +525,8 @@ Table.propTypes = {
     noDataMessage: PropTypes.string,
     className: PropTypes.string,
     sizeByData: PropTypes.bool,
-    defaultRowHeight: PropTypes.number
+    defaultRowHeight: PropTypes.number,
+    focusAnchorId: PropTypes.string
 };
 
 Table.defaultProps = {

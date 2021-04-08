@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { CLASS_NAMES } from './constant';
 import PropTypes from 'prop-types';
 import DatePicker from 'react-datepicker';
 
+import Context from './context';
+
 // todo use reactstrap datepicker
-const TimeRangeSelector = props => {
+const TimeRangeSelector = defaultProps => {
+    const contextProps = useContext(Context);
+    const [shouldUseContext] = useState(contextProps.shouldUseContext);
+    const props = shouldUseContext ? contextProps : defaultProps;
+
     const [startIsFocused, setStartIsFocused] = useState(false);
     const [endIsFocused, setEndIsFocused] = useState(false);
     const handleClearClick = () => props.handleTimeClearClick && props.handleTimeClearClick();

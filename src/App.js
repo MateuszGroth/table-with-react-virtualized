@@ -167,6 +167,7 @@ function App() {
                 isExpandable={true}
                 isExportable={true}
                 isFilterEnabled={true}
+                virtual={true}
                 isTimeRangeSelectorEnabled={true}
                 initialStartDate={initialStartDate}
                 initialEndDate={end}
@@ -185,16 +186,14 @@ function App() {
                     console.log(data);
                 }}
             >
-                {toolkitProps => (
-                    <Fragment>
-                        <TableActionsRow>
-                            <SearchBar {...toolkitProps} />
-                            <TimeRangeSelector {...toolkitProps} />
-                            <ExportPanel {...toolkitProps} />
-                        </TableActionsRow>
-                        <Table {...toolkitProps} />
-                    </Fragment>
-                )}
+                <Fragment>
+                    <TableActionsRow>
+                        <SearchBar />
+                        <TimeRangeSelector />
+                        <ExportPanel />
+                    </TableActionsRow>
+                    <Table />
+                </Fragment>
             </TableToolkitProvider>
 
             {/* <TableToolkitProvider

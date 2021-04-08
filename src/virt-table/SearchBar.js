@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import { CLASS_NAMES } from './constant';
+import Context from './context';
 
-const SearchBar = props => {
+const SearchBar = defaultProps => {
+    const contextProps = useContext(Context);
+    const [shouldUseContext] = useState(contextProps.shouldUseContext);
+    const props = shouldUseContext ? contextProps : defaultProps;
+
     const handleFilterInputChange = ev => {
         const newValue = ev.target.value;
         props.handleFilterChange && props.handleFilterChange(newValue);

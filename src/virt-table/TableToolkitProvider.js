@@ -10,6 +10,8 @@ import {
     exportCsv
 } from './helper';
 
+import Context from './context';
+
 /**
  * Table Toolkit Provider
  * Adds functionalities to the Virtual Table, such as:
@@ -43,8 +45,10 @@ import {
  * @param {String} exportedFileName - title of the printed page and/or file name of the exported csv
  * @param {Function} prepareExportData - callback that if provided, gets called before exporting the data. Exported file will contain the outcome of that callback
  * arguments this callback receives are: (header, data, isExpandable) 
+ * this callback should return an object that contains {Array} header (processed) and {Array} body (processed) props.
  * @param {Function} preparePrintData - callback that if provided, gets called before printing the data. Printed file will contain the outcome of that callback
  * arguments this callback receives are: (header, data, isExpandable)  
+ * this callback should return an object that contains {Array} header (processed) and {Array} body (processed) props.
  * TableProps - props that Table might reveice
  * 
  * When toolkit provider is used, table component (along with the other utility components)
@@ -97,17 +101,17 @@ import {
  *
  */
 const TableToolkitProvider = ({
-    initialSortBy,
-    initialSortDir,
-    isFilterEnabled,
-    initialFilterText,
-    initialStartDate,
-    initialEndDate,
-    onFilterChange,
-    isExportable,
-    isTimeRangeSelectorEnabled,
-    onDateChange,
-    children: Children,
+    initialSortBy = null,
+    initialSortDir = null,
+    isFilterEnabled = null,
+    initialFilterText = null,
+    initialStartDate = null,
+    initialEndDate = null,
+    onFilterChange = null,
+    isExportable = null,
+    isTimeRangeSelectorEnabled = null,
+    onDateChange = null,
+    children: Children = null,
     ...props
 }) => {
     const [filterText, setFilterText] = useState('');
@@ -207,11 +211,15 @@ const TableToolkitProvider = ({
     );
 
     const getHandleExportCallback = (callback, isPrint, processDataCallback = null) => () => {
-        const dataForExport = (processDataCallback || parseDataForExports(isPrint))(
+        const { header, body } = (processDataCallback || parseDataForExports(isPrint))(
             props.header,
             isFilterEnabled ? tableData : data,
             props.isExpandable
         );
+        if (isPrint) {
+            return callback(header, body, props.exportedFileName);
+        }
+        const dataForExport = [header, ...body];
         callback(dataForExport, props.exportedFileName);
     };
 
@@ -271,7 +279,16 @@ const TableToolkitProvider = ({
             props.isClearTimeRangeHidden || (startDate === initialStartDate && endDate === initialEndDate);
     }
 
-    return <Children {...tableProps} />;
+    return (
+        <Context.Provider
+            value={{
+                ...tableProps,
+                shouldUseContext: true
+            }}
+        >
+            {Children}
+        </Context.Provider>
+    );
 };
 
 TableToolkitProvider.propTypes = {

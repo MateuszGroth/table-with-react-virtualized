@@ -5,6 +5,62 @@ import Row from './Row';
 
 import { CLASS_NAMES, HEADER_ATTRIBUTES, DEFAULT_ROW_HEIGHT } from './constant';
 
+export function naturalComparator(a, b) {
+    var cnt = 0,
+        tem;
+    a = String(a).toLowerCase();
+    b = String(b).toLowerCase();
+
+    if (a === b) return 0;
+    if (/\d/.test(a) || /\d/.test(b)) {
+        var Rx = /^\d+(\.\d+)?/;
+        while (a.charAt(cnt) === b.charAt(cnt) && !Rx.test(a.substring(cnt))) {
+            cnt++;
+        }
+        a = a.substring(cnt);
+        b = b.substring(cnt);
+        if (Rx.test(a) || Rx.test(b)) {
+            if (!Rx.test(a)) return a ? 1 : -1;
+            if (!Rx.test(b)) return b ? -1 : 1;
+            tem = parseFloat(a) - parseFloat(b);
+            if (tem !== 0) return tem;
+            a = a.replace(Rx, '');
+            b = b.replace(Rx, '');
+            if (/\d/.test(a) || /\d/.test(b)) {
+                return naturalComparator(a, b);
+            }
+        }
+    }
+
+    if (a === b) return 0;
+    return a > b ? 1 : -1;
+}
+
+//escapes all reg exp special characters from string which is used as a pattern for creating regExp via regExp() object
+export const escapeRegExp = text => text.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
+
+/**
+ * Function transforms search text inserted by the user above the table into two regexps
+ * In first case, the search text will be treated as an actual regexp string and converted into valid regext
+ * In second case, the search text will be treated as a plain text and transformed into regexp with escaped special characters
+ *
+ * @param {String} searchText
+ *
+ * @return {Object}
+ */
+export const getTableFilterRegexpObj = searchText => {
+    const regexpObj = {
+        base: null,
+        escaped: new RegExp(escapeRegExp(searchText), 'gi')
+    };
+
+    try {
+        regexpObj.base = new RegExp(searchText, 'gi');
+    } catch (e) {}
+
+    return regexpObj;
+};
+
 /**
  * Checks if user provided a valid rowComponent and returns it if so. Otherwise returns default Row Component
  * @param {Object} rowComponent
@@ -37,7 +93,7 @@ const getTableCellComponent = cellComponent => {
  * @param {String} attrName
  * @return {Boolean} is provied
  */
-const isAttributeProvided = (obj, attrName) => obj[attrName] != null;
+const isAttributeProvided = (obj, attrName) => obj != null && obj[attrName] != null;
 
 /**
  * Process Table Header
@@ -67,9 +123,6 @@ const mapHeader = (
 
         let className = CLASS_NAMES.HEADER_CELL;
 
-        const processedFocusedCellId = isExpandable && !isNaN(focusedCellId) ? focusedCellId - 1 : focusedCellId;
-
-        if (isFocused && processedFocusedCellId === i) className += ` ${CLASS_NAMES.FOCUS_CELL}`;
         if (head.className) className += ` ${head.className}`;
         if (isSortedBy) className += ` ${CLASS_NAMES.SORTED_HEADER_CELL} ${CLASS_NAMES.SORTED_HEADER_CELL}--${sortDir}`;
 
@@ -77,6 +130,11 @@ const mapHeader = (
             const headerClickCallback = handleHeaderClick(head, i);
             cellComponentProps.onClick = headerClickCallback;
             className += ` ${CLASS_NAMES.POINTER_CELL}`;
+        }
+
+        const processedFocusedCellId = isExpandable && !isNaN(focusedCellId) ? focusedCellId - 1 : focusedCellId;
+        if (cellComponentProps.onClick && isFocused && processedFocusedCellId === i) {
+            className += ` ${CLASS_NAMES.FOCUS_CELL}`;
         }
 
         if (isAttributeProvided(head, HEADER_ATTRIBUTES.COLUMN_WIDTH)) {
@@ -177,36 +235,6 @@ const useResizeObserver = ref => {
     }, [ref]);
     return dimensions;
 };
-function naturalComparator(a, b) {
-    var cnt = 0,
-        tem;
-    a = String(a).toLowerCase();
-    b = String(b).toLowerCase();
-
-    if (a === b) return 0;
-    if (/\d/.test(a) || /\d/.test(b)) {
-        var Rx = /^\d+(\.\d+)?/;
-        while (a.charAt(cnt) === b.charAt(cnt) && !Rx.test(a.substring(cnt))) {
-            cnt++;
-        }
-        a = a.substring(cnt);
-        b = b.substring(cnt);
-        if (Rx.test(a) || Rx.test(b)) {
-            if (!Rx.test(a)) return a ? 1 : -1;
-            if (!Rx.test(b)) return b ? -1 : 1;
-            tem = parseFloat(a) - parseFloat(b);
-            if (tem !== 0) return tem;
-            a = a.replace(Rx, '');
-            b = b.replace(Rx, '');
-            if (/\d/.test(a) || /\d/.test(b)) {
-                return naturalComparator(a, b);
-            }
-        }
-    }
-
-    if (a === b) return 0;
-    return a > b ? 1 : -1;
-}
 
 const sortTableItems = (data, sortBy, sortDir, sortFunc = null) => {
     const dataCopy = [...data]; // we dont want to sort the original array, just return a new sorted copy of original
@@ -224,23 +252,6 @@ const sortTableItems = (data, sortBy, sortDir, sortFunc = null) => {
     }
 
     return dataCopy.sort((a, b) => multiplier * sortFunc(a.cells[sortBy], b.cells[sortBy]));
-};
-
-// use from utils
-//escapes all reg exp special characters from string which is used as a pattern for creating regExp via regExp() object
-export const escapeRegExp = text => text.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
-
-const getTableFilterRegexpObj = searchText => {
-    const regexpObj = {
-        base: null,
-        escaped: new RegExp(escapeRegExp(searchText), 'gi')
-    };
-
-    try {
-        regexpObj.base = new RegExp(searchText, 'gi');
-    } catch (e) {}
-
-    return regexpObj;
 };
 
 /**
@@ -363,14 +374,7 @@ const parseDataForExports = (print = true) => (header, tableData, isExpandable =
         return tmpRowArr;
     }, []);
 
-    return [headerArray, ...rowsArray];
-};
-
-const exportCsv = (...arg) => {
-    console.log(arg);
-};
-const printTable = (...arg) => {
-    console.log(arg);
+    return { header: headerArray, body: rowsArray };
 };
 
 /**
@@ -431,19 +435,22 @@ const getTableHeight = (data, rowHeight = DEFAULT_ROW_HEIGHT) => {
 
     return data.length * rowHeight + headerHeight;
 };
+
+const printTable = console.log;
+const exportCsv = console.log;
+
 export {
     useResizeObserver,
     mapHeader,
-    getTableHeight,
     getTableRowComponent,
     isAttributeProvided,
     getTableCellComponent,
     processTableRow,
-    naturalComparator,
     sortTableItems,
     filterDataByText,
     filterDataByDate,
-    exportCsv,
+    parseDataForExports,
+    getTableHeight,
     printTable,
-    parseDataForExports
+    exportCsv
 };

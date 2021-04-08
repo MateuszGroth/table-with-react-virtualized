@@ -6,8 +6,8 @@ const Row = props => {
     const rowProps = {};
     let className = CLASS_NAMES.ROW;
     if (props.className) className += ` ${props.className}`;
-
     rowProps.className = className;
+
     Object.entries(props).forEach(([key, value]) => {
         if (['className', 'rowData', 'rowId', 'children'].includes(key)) {
             return;

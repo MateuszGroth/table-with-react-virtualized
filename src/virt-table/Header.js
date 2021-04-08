@@ -22,7 +22,7 @@ const Header = ({
     return (
         <RowComponent
             className={CLASS_NAMES.HEADER}
-            style={{ paddingRight: scrollBarSize }}
+            style={{ '--scroll-w': `${scrollBarSize}px` }}
             tabIndex={isSortable ? '0' : '-1'}
             onFocus={handleHeaderFocus}
             onBlur={handleHeaderBlur}

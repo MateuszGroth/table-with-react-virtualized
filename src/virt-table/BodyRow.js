@@ -13,7 +13,9 @@ const BodyRow = props => {
             style={props.style}
             className={`${props.isExpanded ? CLASS_NAMES.EXPANDED_ROW : ''}${
                 props.rowClassName ? ` ${props.rowClassName}` : ''
-            }${props.rowData.className ? ` ${props.row.className}` : ''}`}
+            }${props.rowData.className ? ` ${props.row.className}` : ''}${
+                props.isBodyFocusable ? ` ${CLASS_NAMES.FOCUSABLE_ROW}` : ''
+            }`}
         >
             {!props.isExpandable ? (
                 ''
